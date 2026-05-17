@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // --- Validation Blueprints ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['userId', 'email']) &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.email is string && data.email.size() <= 256 &&
+             (data.get('solvedCount', 0) is number) &&
+             (data.get('displayName', '') is string) &&
+             (data.get('photoURL', '') is string);
+    }
+
+    function isValidSolution(data) {
+      return data.keys().hasAll(['problemId', 'authorId', 'content']) &&
+             data.problemId is string && data.problemId.size() <= 128 &&
+             data.authorId is string && data.authorId.size() <= 128 &&
+             data.content is string && data.content.size() <= 50000 &&
+             data.get('rating', 0) is number &&
+             data.get('voteCount', 0) is number &&
+             data.authorId == request.auth.uid;
+    }
+
+    function isValidForumThread(data) {
+      return data.keys().hasAll(['title', 'authorId']) &&
+             data.title is string && data.title.size() <= 200 &&
+             data.authorId is string && data.authorId.size() <= 128 &&
+             data.authorId == request.auth.uid;
+    }
+
+    function isValidForumPost(data) {
+      return data.keys().hasAll(['threadId', 'authorId', 'content']) &&
+             data.threadId is string && data.threadId.size() <= 128 &&
+             data.authorId is string && data.authorId.size() <= 128 &&
+             data.content is string && data.content.size() <= 10000 &&
+             data.authorId == request.auth.uid;
+    }
+
+    // --- Match Blocks ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if false; // Users shouldn't be listable
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) && 
+                    incoming().diff(existing()).affectedKeys().hasAny(['solvedCount', 'progress', 'displayName', 'photoURL']);
+    }
+
+    match /books/{bookId} {
+      allow read: if true; // Books are public catalysts
+      allow write: if false; // Books are system seeded or admin only
+    }
+
+    match /books/{bookId}/problems/{problemId} {
+      allow read: if true;
+      allow write: if false; // Problems are system seeded
+    }
+
+    match /solutions/{solutionId} {
+      allow read: if true;
+      allow create: if isVerified() && isValidSolution(incoming()) && 
+                    exists(/databases/$(database)/documents/books/$(incoming().bookId)/problems/$(incoming().problemId));
+      allow update: if isVerified() && (
+                      (isOwner(existing().authorId) && isValidSolution(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['content'])) ||
+                      (incoming().diff(existing()).affectedKeys().hasAny(['rating', 'voteCount']) && incoming().diff(existing()).affectedKeys().size() <= 2)
+                    );
+      allow delete: if isOwner(existing().authorId);
+    }
+
+    match /forumThreads/{threadId} {
+      allow read: if true;
+      allow create: if isVerified() && isValidForumThread(incoming());
+      allow update: if isSignedIn() && (
+                      (isOwner(existing().authorId) && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'tags'])) ||
+                      (incoming().diff(existing()).affectedKeys().hasOnly(['replyCount']))
+                    );
+    }
+
+    match /forumThreads/{threadId}/posts/{postId} {
+      allow read: if true;
+      allow create: if isVerified() && isValidForumPost(incoming()) && exists(/databases/$(database)/documents/forumThreads/$(threadId));
+      allow update: if isOwner(existing().authorId) && isValidForumPost(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['content']);
+      allow delete: if isOwner(existing().authorId);
+    }
+  }
+}

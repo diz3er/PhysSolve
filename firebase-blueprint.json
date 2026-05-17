@@ -1,0 +1,122 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and progress data.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "solvedCount": { "type": "number" },
+        "progress": { 
+          "type": "object",
+          "description": "Map of problem IDs to true for completion tracking."
+        }
+      },
+      "required": ["userId", "email"]
+    },
+    "Book": {
+      "title": "Book",
+      "description": "A physics textbook.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "slug": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" }
+      },
+      "required": ["id", "title", "slug"]
+    },
+    "Problem": {
+      "title": "Problem",
+      "description": "A specific problem within a book.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "bookId": { "type": "string" },
+        "number": { "type": "string" },
+        "pageNumber": { "type": "number" },
+        "chapter": { "type": "string" },
+        "chapterName": { "type": "string" }
+      },
+      "required": ["id", "bookId", "number"]
+    },
+    "Solution": {
+      "title": "Solution",
+      "description": "A user-submitted solution for a problem.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "problemId": { "type": "string" },
+        "bookId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "content": { "type": "string" },
+        "rating": { "type": "number" },
+        "voteCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "problemId", "authorId", "content"]
+    },
+    "ForumThread": {
+      "title": "ForumThread",
+      "description": "A discussion thread.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "replyCount": { "type": "number" }
+      },
+      "required": ["id", "title", "authorId"]
+    },
+    "ForumPost": {
+      "title": "ForumPost",
+      "description": "A post within a discussion thread.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "threadId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "threadId", "authorId", "content"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Store individual user profiles and settings."
+    },
+    "/books/{bookId}": {
+      "schema": "Book",
+      "description": "Collection of physics textbooks."
+    },
+    "/books/{bookId}/problems/{problemId}": {
+      "schema": "Problem",
+      "description": "Individual problems indexed under each book."
+    },
+    "/solutions/{solutionId}": {
+      "schema": "Solution",
+      "description": "Publicly shared physics solutions."
+    },
+    "/forumThreads/{threadId}": {
+      "schema": "ForumThread",
+      "description": "Topics for physics discussions."
+    },
+    "/forumThreads/{threadId}/posts/{postId}": {
+      "schema": "ForumPost",
+      "description": "Individual replies within a thread."
+    }
+  }
+}
