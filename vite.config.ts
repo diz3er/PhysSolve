@@ -13,12 +13,14 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     base: './',
     define: {
-      // Safely injects the key or falls back to an empty string so the code doesn't crash
+      'process.env': {},
+      'process.env.NODE_ENV': JSON.stringify(mode),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
+      'process.env.DISABLE_HMR': JSON.stringify(env.DISABLE_HMR || 'false'),
     },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(process.cwd(), '.'),
       },
     },
     server: {
