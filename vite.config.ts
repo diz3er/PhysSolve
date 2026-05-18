@@ -13,10 +13,11 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     base: './',
     define: {
-      'process.env': {},
       'process.env.NODE_ENV': JSON.stringify(mode),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
       'process.env.DISABLE_HMR': JSON.stringify(env.DISABLE_HMR || 'false'),
+      'process.env': {},
+      'global': 'window',
     },
     resolve: {
       alias: {
